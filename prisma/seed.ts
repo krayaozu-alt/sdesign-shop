@@ -322,17 +322,42 @@ async function main() {
   }
 
   console.log('→ Compte administrateur');
-  const adminPhone = '+226 76 51 88 11';
+  // Identifiants de l'administratrice : jamais ecrits ici.
+  //
+  // Une version precedente posait un mot de passe en clair dans ce fichier.
+  // Comme la graine est versionnee, ce mot de passe partait dans le depot :
+  // quiconque le lisait pouvait ouvrir le back-office en production. Les trois
+  // valeurs viennent donc de l'environnement, et la graine s'arrete si elles
+  // manquent plutot que de fabriquer un acces devinable.
+  //
+  // Pour ne creer ou renouveler QUE ce compte, sans rejouer toute la graine :
+  //   node --env-file=.env scripts/provisionner-admin.mjs
+  const adminPhone = (process.env.ADMIN_PHONE ?? '').trim();
+  const adminEmail = (process.env.ADMIN_EMAIL ?? '').trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD ?? '';
+
+  if (!adminPhone || !adminEmail || !adminPassword) {
+    throw new Error(
+      'ADMIN_PHONE, ADMIN_EMAIL et ADMIN_PASSWORD sont requis pour semer le compte administrateur. ' +
+        'Definissez-les dans .env, ou lancez scripts/provisionner-admin.mjs pour ce seul compte.',
+    );
+  }
+  if (adminPassword.length < 12) {
+    throw new Error('ADMIN_PASSWORD doit faire au moins 12 caracteres.');
+  }
+
   const admin = await prisma.user.upsert({
     where: { phone: adminPhone },
     update: {},
     create: {
       fullName: 'Administrateur S.DESIGN',
       phone: adminPhone,
-      email: 'admin@sdesignshop.bf',
+      email: adminEmail,
       whatsapp: adminPhone,
-      passwordHash: await bcrypt.hash('Admin@2026', 10),
+      passwordHash: await bcrypt.hash(adminPassword, 10),
       role: 'ADMIN',
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -450,8 +475,8 @@ async function main() {
   console.log('✔ Base initialisée avec les données officielles.');
   console.log('  Connexion administrateur');
   console.log(`  Téléphone : ${adminPhone}`);
-  console.log('  Mot de passe : Admin@2026');
-  console.log('  → À modifier immédiatement depuis Mon profil.');
+  console.log(`  Adresse   : ${adminEmail}`);
+  console.log('  Mot de passe : celui fourni via ADMIN_PASSWORD (jamais affiché ici).');
 }
 
 main()

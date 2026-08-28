@@ -48,13 +48,28 @@ L'application est disponible sur <http://localhost:3000>.
 
 ### Compte administrateur initial
 
-| | |
-|---|---|
-| Téléphone | `+226 76 51 88 11` |
-| Mot de passe | `Admin@2026` |
+Aucun identifiant n'est fourni ici, et aucun mot de passe par défaut n'existe : un mot de passe
+publié dans un dépôt n'est pas un mot de passe. Le compte se provisionne depuis l'environnement.
 
-**Changez ce mot de passe dès la première connexion** (Mon espace → Sécurité), puis mettez à jour
-les coordonnées réelles dans *Admin → Paramètres*.
+Renseignez ces trois variables dans `.env` (jamais dans le dépôt) :
+
+```
+ADMIN_EMAIL="…"
+ADMIN_PHONE="…"        # exactement tel qu'il servira à se connecter, espaces compris
+ADMIN_PASSWORD="…"     # 12 caractères minimum, avec majuscule et chiffre
+```
+
+Puis créez ou renouvelez le compte :
+
+```bash
+node --env-file=.env scripts/provisionner-admin.mjs
+```
+
+Le script hache le mot de passe avec bcrypt, ne l'affiche jamais et met à jour le compte existant
+plutôt que d'en créer un second. Retirez `ADMIN_PASSWORD` de `.env` une fois la connexion vérifiée.
+
+Ces variables ne sont lues que par ce script et par la graine : **l'application ne les lit jamais**,
+il est donc inutile de les déclarer sur l'hébergeur.
 
 ---
 
