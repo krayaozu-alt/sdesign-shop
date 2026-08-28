@@ -1,0 +1,18 @@
+{
+  "name": "S.DESIGN SHOP",
+  "short_name": "S.Design",
+  "description": "Beauté • Formation • Élégance — formations, prestations et réservations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#160522",
+  "theme_color": "#160522",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/icone.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

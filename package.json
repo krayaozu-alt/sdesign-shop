@@ -1,0 +1,74 @@
+{
+  "name": "sdesign-shop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "S.DESIGN SHOP - Plateforme de gestion beaute, formation et prestations",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
+    "verifier:sigv4": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verifier-sigv4.mjs",
+    "verifier:r2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/verifier-r2.mjs",
+    "verifier:brevo": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/verifier-brevo.mjs",
+    "migrer:r2": "node --env-file=.env scripts/migrer-vers-r2.mjs",
+    "basculer:postgres": "node --env-file=.env scripts/basculer-postgres.mjs",
+    "verifier:images": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/verifier-images.mjs",
+    "exporter:donnees": "node --env-file=.env scripts/exporter-donnees.mjs",
+    "importer:donnees": "node --env-file=.env scripts/importer-donnees.mjs",
+    "start:prod": "node .next/standalone/server.js",
+    "comparer:bases": "node --env-file=.env scripts/comparer-bases.mjs",
+    "verifier:postgres": "node --env-file=.env scripts/verifier-postgres.mjs",
+    "diagnostic:env": "node --env-file=.env scripts/diagnostic-env.mjs",
+    "inventaire:fichiers": "node --env-file=.env scripts/inventaire-fichiers.mjs",
+    "auditer:r2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/auditer-r2.mjs"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "bcryptjs": "2.4.3",
+    "clsx": "2.1.1",
+    "date-fns": "3.6.0",
+    "jose": "5.9.6",
+    "lucide-react": "0.454.0",
+    "next": "^14.2.35",
+    "qrcode": "1.5.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "2.13.3",
+    "server-only": "0.0.1",
+    "tailwind-merge": "2.5.4",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "20.17.6",
+    "@types/qrcode": "1.5.5",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "^14.2.35",
+    "postcss": "8.4.49",
+    "prisma": "5.22.0",
+    "tailwindcss": "3.4.14",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true,
+    "esbuild@0.23.1": true,
+    "unrs-resolver@1.12.2": true
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

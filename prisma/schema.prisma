@@ -1,0 +1,653 @@
+// S.DESIGN SHOP - Schema de base de donnees
+//
+// Production : PostgreSQL manage (Neon, projet « sdesign-shop », base neondb,
+// region AWS eu-central-1). Migre depuis SQLite le 27 aout 2026.
+// Retour a SQLite : node scripts/basculer-postgres.mjs --revenir --appliquer
+//
+// Note : le schema n'utilise volontairement aucun enum Prisma ni type natif
+// @db., ce qui le rend portable entre les deux moteurs. Les statuts sont des
+// String controles par les constantes de src/lib/constants.ts et valides par Zod.
+
+generator client {
+  provider = "prisma-client-js"
+
+  // Cibles des moteurs Prisma.
+  // « native » couvre la machine de developpement ; « debian-openssl-3.0.x »
+  // couvre les serveurs Linux courants (Ubuntu 22.04+, Debian 12, images
+  // Docker node:*-slim et node:*-bookworm). Sans cette ligne, un build
+  // effectue sous Windows produirait un client inutilisable sur le serveur.
+  // Pour une image Alpine, ajouter "linux-musl-openssl-3.0.x".
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Connexion groupee (Neon : hote en -pooler), utilisee par l'application.
+  url       = env("DATABASE_URL")
+  // Connexion directe, exigee par prisma migrate et prisma db push.
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ---------------------------------------------------------------- UTILISATEURS
+
+model User {
+  id              String    @id @default(cuid())
+  fullName        String
+  email           String?   @unique
+  phone           String    @unique
+  whatsapp        String?
+  passwordHash    String
+  role            String    @default("CLIENTE") // ADMIN | FORMATEUR | EMPLOYE | ELEVE | CLIENTE
+  avatarUrl       String?
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  /// Vérification de l'adresse e-mail par code OTP.
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  student           Student?
+  customer          Customer?
+  trainer           Trainer?
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  otpCodes          OtpCode[]
+  favorites         Favorite[]
+  waitlistEntries   Waitlist[]
+  recordedPayments  Payment[]      @relation("PaymentRecordedBy")
+  issuedReceipts    Receipt[]      @relation("ReceiptIssuedBy")
+  staffAppointments Appointment[]  @relation("AppointmentStaff")
+
+  @@index([role])
+  @@map("users")
+}
+
+model Student {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  matricule        String    @unique
+  birthDate        DateTime?
+  address          String?
+  emergencyContact String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+  payments    Payment[]
+
+  @@map("students")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  fullName  String
+  phone     String
+  whatsapp  String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointments Appointment[]
+  payments     Payment[]
+
+  @@index([phone])
+  @@map("customers")
+}
+
+model Trainer {
+  id           String   @id @default(cuid())
+  userId       String?  @unique
+  fullName     String
+  speciality   String
+  phone        String?
+  whatsapp     String?
+  photoUrl     String?
+  bio          String?
+  availability String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  courses  Course[]
+  sessions CourseSession[]
+
+  @@map("trainers")
+}
+
+// ---------------------------------------------------------------- FORMATIONS
+
+model Course {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  name             String
+  category         String
+  imageUrl         String?
+  shortDescription String
+  description      String
+  objectives       String    @default("[]")
+  requirements     String    @default("[]")
+  durationLabel    String
+  durationHours    Int       @default(0)
+  level            String    @default("DEBUTANT") // DEBUTANT | INTERMEDIAIRE | AVANCE | TOUS
+  price            Int       @default(0)
+  depositAmount    Int       @default(0)
+  capacity         Int       @default(15)
+  startDate        DateTime?
+  endDate          DateTime?
+  trainerId        String?
+  status           String    @default("OUVERTE") // BROUILLON | OUVERTE | COMPLETE | EN_COURS | TERMINEE | ARCHIVEE
+  isFeatured       Boolean   @default(false)
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  trainer     Trainer?        @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  modules     CourseModule[]
+  sessions    CourseSession[]
+  enrollments Enrollment[]
+  images      CourseImage[]
+  posts       Post[]
+  banners     Banner[]
+  favorites   Favorite[]
+
+  @@index([status])
+  @@index([category])
+  @@map("courses")
+}
+
+/// Photothèque d'une formation : plusieurs visuels par formation, dont une
+/// photo principale (isPrimary) recopiée dans Course.imageUrl pour l'affichage.
+model CourseImage {
+  id        String   @id @default(cuid())
+  courseId  String
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@map("course_images")
+}
+
+model CourseModule {
+  id            String   @id @default(cuid())
+  courseId      String
+  title         String
+  description   String?
+  orderIndex    Int      @default(0)
+  durationHours Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progresses ModuleProgress[]
+
+  @@index([courseId])
+  @@map("course_modules")
+}
+
+/// Session de formation : une periode reelle pendant laquelle une formation est
+/// donnee. Une formation est permanente et n'a pas de dates ; ce sont ses
+/// sessions qui en portent. Une meme formation peut en avoir autant que
+/// necessaire (septembre, octobre, novembre...).
+model CourseSession {
+  id                   String    @id @default(cuid())
+  /// Identifiant lisible pour l'URL publique : /sessions/coiffe-senegalais-septembre.
+  /// Indispensable au partage et au referencement.
+  slug                 String    @unique
+  courseId             String
+  title                String
+  startDate            DateTime
+  endDate              DateTime
+  /// Au-dela de cette date, les inscriptions ne sont plus acceptees.
+  /// Vide = jusqu'au demarrage de la session.
+  registrationDeadline DateTime?
+  location             String?
+  capacity             Int       @default(15)
+  /// BROUILLON | PROGRAMMEE | INSCRIPTIONS_OUVERTES | PRESQUE_COMPLETE
+  /// | COMPLETE | EN_COURS | TERMINEE | ANNULEE
+  status               String    @default("BROUILLON")
+  /// Prix specifique a cette session. NULL = prix officiel de la formation.
+  /// N'est renseigne que si l'administrateur le definit explicitement.
+  price                Int?
+  description          String?
+  imageUrl             String?
+  /// Formateur affecte a cette session. A defaut, celui de la formation.
+  trainerId            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  trainer     Trainer?     @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  enrollments Enrollment[]
+  attendances Attendance[]
+  waitlist    Waitlist[]
+  posts       Post[]
+  banners     Banner[]
+
+  @@index([courseId])
+  @@index([status])
+  @@index([startDate])
+  @@map("course_sessions")
+}
+
+/// Liste d'attente d'une session complete.
+/// Aucune place n'est reservee : la personne est seulement prevenue lorsqu'une
+/// place se libere, et confirme elle-meme son inscription.
+model Waitlist {
+  id         String    @id @default(cuid())
+  sessionId  String
+  /// Compte existant, lorsque la personne est connectee.
+  userId     String?
+  fullName   String
+  phone      String
+  email      String?
+  /// EN_ATTENTE | PREVENUE | INSCRITE | ANNULEE
+  status     String    @default("EN_ATTENTE")
+  notifiedAt DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  session CourseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Une meme personne ne figure qu'une fois par session.
+  @@unique([sessionId, phone])
+  @@index([sessionId, status])
+  @@map("waitlists")
+}
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  reference   String    @unique
+  studentId   String
+  courseId    String
+  sessionId   String?
+  status      String    @default("EN_ATTENTE") // EN_ATTENTE | CONFIRMEE | EN_COURS | TERMINEE | ABANDONNEE | ANNULEE
+  progress    Int       @default(0)
+  amountDue   Int       @default(0)
+  amountPaid  Int       @default(0)
+  desiredDate DateTime?
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  session     CourseSession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  attendances Attendance[]
+  payments    Payment[]
+  certificate Certificate?
+  modules     ModuleProgress[]
+
+  @@index([status])
+  @@index([studentId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model ModuleProgress {
+  id           String    @id @default(cuid())
+  enrollmentId String
+  moduleId     String
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  score        Int?
+
+  enrollment Enrollment   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  module     CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, moduleId])
+  @@map("module_progress")
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  sessionId    String?
+  date         DateTime
+  status       String   @default("PRESENT") // PRESENT | ABSENT | RETARD | EXCUSE
+  note         String?
+  createdAt    DateTime @default(now())
+
+  enrollment Enrollment     @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  session    CourseSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([enrollmentId])
+  @@map("attendance")
+}
+
+// ---------------------------------------------------------------- PRESTATIONS
+
+model Service {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  category        String
+  imageUrl        String?
+  description     String
+  price           Int      @default(0)
+  durationMinutes Int      @default(60)
+  isAvailable     Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([category])
+  @@map("services")
+}
+
+model Appointment {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  customerId      String
+  serviceId       String
+  staffUserId     String?
+  scheduledAt     DateTime
+  durationMinutes Int      @default(60)
+  status          String   @default("EN_ATTENTE") // EN_ATTENTE | CONFIRME | TERMINE | ANNULE | ABSENT
+  amountDue       Int      @default(0)
+  amountPaid      Int      @default(0)
+  notes           String?
+  source          String   @default("SITE") // SITE | TELEPHONE | WHATSAPP | SUR_PLACE
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer  Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  service   Service   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  staffUser User?     @relation("AppointmentStaff", fields: [staffUserId], references: [id], onDelete: SetNull)
+  payments  Payment[]
+
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("appointments")
+}
+
+// ---------------------------------------------------------------- FINANCES
+
+model Payment {
+  id               String   @id @default(cuid())
+  reference        String   @unique
+  amount           Int
+  method           String // ESPECES | ORANGE_MONEY | MOOV_MONEY | WAVE | VIREMENT | AUTRE
+  status           String   @default("PAYE") // EN_ATTENTE | PAYE | ANNULE | REMBOURSE
+  purpose          String   @default("FORMATION") // FORMATION | PRESTATION | AUTRE
+  label            String
+  providerRef      String?
+  paidAt           DateTime @default(now())
+  customerId       String?
+  studentId        String?
+  enrollmentId     String?
+  appointmentId    String?
+  recordedByUserId String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  student     Student?     @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  enrollment  Enrollment?  @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  recordedBy  User?        @relation("PaymentRecordedBy", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  receipt     Receipt?
+
+  @@index([paidAt])
+  @@index([status])
+  @@map("payments")
+}
+
+model Receipt {
+  id             String   @id @default(cuid())
+  number         String   @unique
+  paymentId      String   @unique
+  payerName      String
+  itemLabel      String
+  totalAmount    Int
+  paidAmount     Int
+  balance        Int
+  method         String
+  issuedAt       DateTime @default(now())
+  issuedByUserId String?
+  notes          String?
+
+  payment  Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  issuedBy User?   @relation("ReceiptIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("receipts")
+}
+
+// ---------------------------------------------------------------- CERTIFICATS
+
+model Certificate {
+  id               String   @id @default(cuid())
+  number           String   @unique
+  verificationCode String   @unique
+  enrollmentId     String   @unique
+  studentName      String
+  courseName       String
+  durationLabel    String
+  mention          String   @default("Satisfaisant")
+  signedBy         String   @default("La Direction")
+  status           String   @default("VALIDE") // VALIDE | REVOQUE
+  issuedAt         DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@map("certificates")
+}
+
+// ---------------------------------------------------------------- CONTENU
+
+model GalleryItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String // COIFFURE | MAQUILLAGE | ONGLERIE | FORMATION | MARIAGE | EVENEMENT | AVANT_APRES
+  mediaType   String   @default("IMAGE") // IMAGE | VIDEO
+  url         String
+  isPublished Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("gallery")
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  authorName  String
+  role        String   @default("Cliente")
+  message     String
+  rating      Int      @default(5)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+// ---------------------------------------------------------------- SYSTEME
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String?
+  type      String
+  title     String
+  message   String
+  link      String?
+  channel   String    @default("APP") // APP | WHATSAPP | SMS | EMAIL
+  status    String    @default("ENVOYEE") // EN_ATTENTE | ENVOYEE | ECHEC
+  isRead    Boolean   @default(false)
+  payload   String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  group     String   @default("GENERAL")
+  label     String
+  type      String   @default("TEXT") // TEXT | TEXTAREA | NUMBER | BOOLEAN | IMAGE | COLOR
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// Codes de vérification à usage unique (vérification e-mail, réinitialisation
+/// de mot de passe). Le code n'est JAMAIS stocké en clair : seule une empreinte
+/// HMAC-SHA256 est conservée, la clé restant hors base de données.
+model OtpCode {
+  id         String    @id @default(cuid())
+  userId     String
+  purpose    String // EMAIL_VERIFICATION | PASSWORD_RESET
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+  @@map("otp_codes")
+}
+
+// -------------------------------------------------------------------- MARKETING
+
+/// Publication affichee automatiquement sur le site public entre sa date de
+/// parution et sa date d'expiration. Passe l'echeance, elle disparait sans
+/// aucune intervention : rien de perime ne reste visible par une cliente.
+model Post {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  title    String
+  subtitle String?
+  body     String
+  imageUrl String?
+  /// Galerie complementaire, en JSON : ["url1", "url2"].
+  /// Volontairement en String pour rester portable entre SQLite et PostgreSQL.
+  images   String  @default("[]")
+
+  /// Rattachement facultatif : le bouton mene alors directement a la formation
+  /// ou a la session concernee.
+  courseId  String?
+  sessionId String?
+
+  /// Prix mis en avant. NULL = aucun prix affiche, ou celui de la session liee.
+  price Int?
+
+  ctaLabel String?
+  ctaUrl   String?
+
+  /// BROUILLON | PROGRAMMEE | PUBLIEE | ARCHIVEE
+  status      String    @default("BROUILLON")
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  sortOrder   Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course  Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  session CourseSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+  @@index([expiresAt])
+  @@map("posts")
+}
+
+/// Banniere promotionnelle, positionnee a un emplacement precis de la page
+/// d'accueil. Meme logique de fenetre de diffusion que les publications.
+model Banner {
+  id          String  @id @default(cuid())
+  title       String
+  subtitle    String?
+  description String?
+  imageUrl    String?
+  /// Prix affiche sur la banniere. NULL = aucun prix affiche.
+  price       Int?
+
+  /// HERO | ACCUEIL | MILIEU | FORMATIONS | BAS_DE_PAGE
+  placement String @default("HERO")
+
+  courseId  String?
+  sessionId String?
+
+  ctaLabel String?
+  ctaUrl   String?
+
+  /// Meme cycle de vie que les publications, pour un comportement homogene :
+  /// BROUILLON | PROGRAMMEE | PUBLIEE | ARCHIVEE
+  status    String    @default("BROUILLON")
+  startsAt  DateTime?
+  endsAt    DateTime?
+  sortOrder Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course  Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  session CourseSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([placement, status])
+  @@index([endsAt])
+  @@map("banners")
+}
+
+/// Formation mise de cote par une cliente. Strictement personnel : chaque
+/// requete est filtree sur l'utilisateur connecte.
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// Une formation ne peut etre mise en favori qu'une fois par personne.
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@map("favorites")
+}

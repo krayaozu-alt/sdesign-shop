@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="or" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8A6A2F"/>
+      <stop offset="45%" stop-color="#E8C67A"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+    <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3B0F52"/>
+      <stop offset="100%" stop-color="#160522"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#fond)"/>
+  <circle cx="256" cy="256" r="188" fill="none" stroke="url(#or)" stroke-width="3" opacity="0.5"/>
+  <text x="50%" y="52%" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="210" font-style="italic" fill="url(#or)">S</text>
+  <text x="50%" y="76%" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="42" letter-spacing="14" fill="#E8C67A">SHOP</text>
+</svg>

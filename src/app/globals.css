@@ -1,0 +1,313 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-night-950 text-cream font-sans antialiased;
+    background-image: radial-gradient(140% 80% at 50% -10%, #3B0F52 0%, #250A30 40%, #08070A 100%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+
+  ::selection {
+    background: rgba(201, 162, 39, 0.32);
+    color: #fff;
+  }
+
+  /* Barres de defilement discretes */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(201, 162, 39, 0.28);
+    border-radius: 999px;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-cream placeholder:text-cream-dim
+           outline-none transition focus:border-gold-500/60 focus:ring-2 focus:ring-gold-500/20 w-full;
+  }
+
+  select option {
+    background-color: #250A30;
+    color: #FAF8F4;
+  }
+
+  label {
+    @apply block text-sm text-cream-muted mb-1.5;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+
+  .surface {
+    @apply rounded-card border border-white/10 bg-white/[0.045] backdrop-blur-sm shadow-card;
+  }
+
+  .surface-strong {
+    @apply rounded-card border border-gold-500/25 bg-white/[0.06] shadow-card;
+  }
+
+  .gold-text {
+    @apply bg-gold-gradient bg-clip-text text-transparent;
+  }
+
+  .gold-rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.6), transparent);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill px-5 py-3 text-sm font-semibold
+           transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-gold {
+    @apply btn bg-gold-gradient text-night-900 shadow-gold hover:brightness-110;
+  }
+
+  .btn-outline {
+    @apply btn border border-gold-500/40 text-gold-300 hover:bg-gold-500/10;
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/5 text-cream hover:bg-white/10;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-400/30 bg-red-500/10 text-red-200 hover:bg-red-500/20;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-pill border border-white/12 bg-white/5 px-3 py-1 text-xs text-cream-muted;
+  }
+
+  .card-hover {
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lift;
+  }
+
+  .section-title {
+    @apply font-display text-2xl sm:text-3xl text-cream;
+  }
+
+  .label-eyebrow {
+    @apply text-[11px] uppercase tracking-[0.28em] text-gold-300/80;
+  }
+
+  /* Media : vignette degradee utilisee tant qu'aucune photo n'est televersee */
+  .media-fallback {
+    background-image: linear-gradient(140deg, #4E1668 0%, #250A30 55%, #08070A 100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   THÈME DU BACK-OFFICE
+   Le site public garde son identité premium (aubergine, doré, serif).
+   L'administration adopte un habillage « outil de gestion » : fond graphite
+   froid, surfaces sobres, angles plus droits, typographie sans-serif dense.
+   Tout est limité à .admin-theme : aucun composant public n'est modifié.
+--------------------------------------------------------------------------- */
+.admin-theme {
+  background: linear-gradient(180deg, #181818 0%, #08070A 100%);
+  color: #FAF8F4;
+  min-height: 100dvh;
+}
+
+.admin-theme aside,
+.admin-theme header {
+  background-color: rgba(17, 17, 17, 0.94) !important;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.admin-theme .surface,
+.admin-theme .surface-strong {
+  border-radius: 0.75rem;
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.admin-theme .section-title {
+  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #FAF8F4;
+}
+
+.admin-theme .font-display {
+  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.admin-theme .label-eyebrow {
+  color: #777777;
+  letter-spacing: 0.16em;
+}
+
+.admin-theme .text-cream {
+  color: #FAF8F4;
+}
+.admin-theme .text-cream-muted {
+  color: #A9A5A0;
+}
+.admin-theme .text-cream-dim {
+  color: #777777;
+}
+
+.admin-theme .btn,
+.admin-theme .chip,
+.admin-theme input,
+.admin-theme select,
+.admin-theme textarea {
+  border-radius: 0.6rem;
+}
+
+.admin-theme .btn {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+/* L'or reste l'accent de marque, mais en aplat : moins décoratif, plus outil. */
+.admin-theme .btn-gold {
+  background-image: none;
+  background-color: #C9A227;
+  box-shadow: none;
+}
+
+.admin-theme .gold-rule {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.admin-theme .card-hover:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(201, 162, 39, 0.35);
+}
+
+@media print {
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   MICRO-INTERACTIONS
+   Des transitions courtes et discretes. Le luxe se lit dans la retenue :
+   rien ne doit bouger assez pour attirer le regard par lui-meme.
+--------------------------------------------------------------------------- */
+
+/* Zoom tres leger d'une photo au survol de sa carte. Le conteneur doit porter
+   `overflow-hidden`, sinon l'image deborderait de ses coins arrondis. */
+.media-zoom {
+  overflow: hidden;
+}
+.media-zoom img,
+.media-zoom .media-fallback {
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .media-zoom img,
+.media-zoom:hover img,
+.group:hover .media-zoom .media-fallback,
+.media-zoom:hover .media-fallback {
+  transform: scale(1.045);
+}
+
+/* Elevation au survol, plus douce que `card-hover` et sans deplacement brutal. */
+.lift {
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 400ms ease,
+    border-color 400ms ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+}
+
+/* Apparition d'une section au defilement.
+   L'element est masque au depart et devoile par `IntersectionObserver`
+   (voir `ApparitionAuDefilement`). Sans JavaScript, la regle `@media` plus bas
+   et l'etat par defaut laissent le contenu visible : aucun texte n'est jamais
+   perdu si le script ne s'execute pas. */
+.apparait {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.apparait.est-visible {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   MOUVEMENT REDUIT
+   Reglage systeme respecte sans exception. Les animations decoratives sont
+   neutralisees, mais AUCUN contenu ne disparait : les elements en attente
+   d'apparition sont rendus visibles immediatement.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .apparait {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .lift:hover,
+  .card-hover:hover {
+    transform: none !important;
+  }
+
+  .media-zoom img,
+  .media-zoom .media-fallback,
+  .group:hover .media-zoom img,
+  .media-zoom:hover img {
+    transform: none !important;
+  }
+}
